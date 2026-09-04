@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+
+PROGNAME=$(basename "$0")
+
+SCRIPT_VERSION="0.0.1"
+LEAVE_TIME="15:30"
+MESSAGE="Go go go!"
+
+EXIT_SUCCESS=0
+EXIT_ERROR=1
+
+USAGE="usage: $PROGNAME [--time time]
+$PROGNAME calculates time to leave
+
+options:
+  -h, --help              display this help and exit
+  -l, --long              display full time
+  -m, --message message   set leave message. Default $MESSAGE
+  -t, --time time         set leave hour in HH:MM format
+  --version               display version info and exit
+"
+
+user_leave_time=$LEAVE_TIME
+user_message=$MESSAGE
+is_long_time=false
+
+#
+# Helpers
+#
+print_std_err() {
+  echo "$PROGNAME: $*" >&2
+}
+
+print_std_out() {
+  echo "$*"
+}
+
+validate_second_option() {
+  if [[ -z "$1" || "$1" == -* ]]; then
+    print_std_err "$2"
+    exit $EXIT_ERROR
+  fi
+}
+
+main() {
+  # Parse options
+  while test $# -ne 0; do
+    case $1 in
+      -h|--help)
+        print_std_out "$USAGE";
+        exit $EXIT_SUCCESS;;
+      -l|--long) is_long_time=true
+        shift
+        continue;;
+      -m|--message)
+        validate_second_option "$2" "message requires a value"
+        user_message=$2
+        shift
+        shift
+        continue;;
+      -t|--time)
+        validate_second_option "$2" "time requires a value"
+        if [[ ! "$2" =~ ^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$ ]]; then
+          print_std_err "invalid time format: $2 expected: HH:MM"
+          exit $EXIT_ERROR
+        fi
+        user_leave_time=$2
+        shift
+        shift
+        continue;;
+      --version)
+        print_std_out "$SCRIPT_VERSION";
+        exit $EXIT_SUCCESS;;
+      -*)
+        print_std_err "invalid option: $1"
+        exit $EXIT_ERROR;;
+      *)
+        print_std_err "invalid option: $1"
+        exit $EXIT_ERROR;;
+    esac
+  done
+
+  current_seconds=$(( 10#$(date +%H)*3600 + 10#$(date +%M)*60 + 10#$(date +%S)))
+
+  leave_hour=${user_leave_time%%:*}
+  leave_mins=${user_leave_time##*:}
+  leave_secs=$((10#$leave_hour*3600 + 10#$leave_mins*60))
+
+  diff=$((leave_secs - current_seconds))
+
+  if ((diff < 0)); then
+    print_std_out "$user_message"
+  else
+    # Calculate hours and minutes
+    hours=$((diff / 3600))
+    minutes=$(((diff % 3600) / 60))
+
+    # Format hours and minutes to two digits
+    if (($hours < 10)); then
+      hours="0${hours}"
+    fi
+
+    if (($minutes < 10)); then
+      minutes="0${minutes}"
+    fi
+
+    # Print remaining time
+    if $is_long_time; then
+      print_std_out "You have ${hours}h ${minutes}m"
+    else
+      print_std_out "${hours}:${minutes}"
+    fi
+  fi
+
+  exit $EXIT_SUCCESS
+}
+
+main "$@"
