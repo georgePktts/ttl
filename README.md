@@ -24,8 +24,16 @@ Go go go!
 Download the script, make it executable, and drop it somewhere in your `PATH`:
 
 ```bash
-curl -o /usr/local/bin/ttl https://raw.githubusercontent.com/georgePktts/ttl/main/ttl
-chmod +x /usr/local/bin/ttl
+mkdir -p ~/.local/bin
+curl -o ~/.local/bin/ttl https://raw.githubusercontent.com/georgePktts/ttl/main/ttl
+chmod +x ~/.local/bin/ttl
+```
+
+Make sure `~/.local/bin` is in your `PATH` (add `export PATH="$HOME/.local/bin:$PATH"` to your `.bashrc`/`.zshrc` if needed).  
+Alternatively, install system-wide with `sudo`:
+```bash
+sudo curl -o /usr/local/bin/ttl https://raw.githubusercontent.com/georgePktts/ttl/main/ttl
+sudo chmod +x /usr/local/bin/ttl
 ```
 
 Requires `bash`. Works on Linux and macOS.  
