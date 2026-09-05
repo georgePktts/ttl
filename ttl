@@ -1,28 +1,29 @@
 #!/usr/bin/env bash
 
+#
+# Constants
+#
 PROGNAME=$(basename "$0")
 
-SCRIPT_VERSION="0.0.1"
-LEAVE_TIME="15:30"
-MESSAGE="Go go go!"
+SCRIPT_VERSION="0.0.2"
+DEFAULT_MESSAGE="Go go go!"
 
-EXIT_SUCCESS=0
-EXIT_ERROR=1
+CONFIG_DIR="$HOME/.config/ttl"
+CONFIG_FILE="$CONFIG_DIR/ttl.conf"
 
-USAGE="usage: $PROGNAME [--time time]
+USAGE="usage: $PROGNAME [--time time] [--message message]
 $PROGNAME calculates time to leave
 
 options:
   -h, --help              display this help and exit
   -l, --long              display full time
-  -m, --message message   set leave message. Default $MESSAGE
+  -m, --message message   set leave message. Default $DEFAULT_MESSAGE
   -t, --time time         set leave hour in HH:MM format
-  --version               display version info and exit
+      --version           display version info and exit
 "
 
-user_leave_time=$LEAVE_TIME
-user_message=$MESSAGE
-is_long_time=false
+EXIT_SUCCESS=0
+EXIT_ERROR=1
 
 #
 # Helpers
@@ -42,6 +43,35 @@ validate_second_option() {
   fi
 }
 
+write_configuration() {
+  mkdir -p "$CONFIG_DIR"
+  {
+    echo "LEAVE_TIME=\"$user_leave_time\""
+    echo "MESSAGE=\"$user_message\""
+  } > "$CONFIG_FILE"
+}
+
+prompt_for_leave_time() {
+  local input_time
+  while true; do
+    read -rp "set leave time (HH:MM): " input_time
+    if [[ "$input_time" =~ ^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$ ]]; then
+      user_leave_time="$input_time"
+      break
+    else
+      print_std_err "wrong format"
+    fi
+  done
+}
+
+# Variables
+is_long_time=false
+has_config_changed=false
+cli_leave_time=""
+cli_message=""
+user_leave_time=""
+user_message=""
+
 main() {
   # Parse options
   while test $# -ne 0; do
@@ -49,12 +79,14 @@ main() {
       -h|--help)
         print_std_out "$USAGE";
         exit $EXIT_SUCCESS;;
-      -l|--long) is_long_time=true
+      -l|--long)
+        is_long_time=true
         shift
         continue;;
       -m|--message)
         validate_second_option "$2" "message requires a value"
-        user_message=$2
+        cli_message=$2
+        has_config_changed=true
         shift
         shift
         continue;;
@@ -64,7 +96,8 @@ main() {
           print_std_err "invalid time format: $2 expected: HH:MM"
           exit $EXIT_ERROR
         fi
-        user_leave_time=$2
+        cli_leave_time=$2
+        has_config_changed=true
         shift
         shift
         continue;;
@@ -80,6 +113,29 @@ main() {
     esac
   done
 
+  # Load configuration file if exists
+  if [[ -f "$CONFIG_FILE" ]]; then
+    source "$CONFIG_FILE"
+    user_leave_time=$LEAVE_TIME
+    user_message=$MESSAGE
+  else
+    user_message=$DEFAULT_MESSAGE
+    has_config_changed=true
+  fi
+
+  [[ -n "$cli_leave_time" ]] && user_leave_time="$cli_leave_time"
+  [[ -n "$cli_message" ]] && user_message="$cli_message"
+  
+  # If still no leave time (not found in configuration and not provided with -t), prompt
+  if [[ -z "$user_leave_time" ]]; then
+    prompt_for_leave_time
+  fi
+
+  if $has_config_changed; then
+    write_configuration
+  fi
+
+  # Start logic
   current_seconds=$(( 10#$(date +%H)*3600 + 10#$(date +%M)*60 + 10#$(date +%S)))
 
   leave_hour=${user_leave_time%%:*}
