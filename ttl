@@ -5,7 +5,7 @@
 #
 PROGNAME=$(basename "$0")
 
-SCRIPT_VERSION="0.0.2"
+SCRIPT_VERSION="0.0.3"
 DEFAULT_MESSAGE="Go go go!"
 
 CONFIG_DIR="$HOME/.config/ttl"
@@ -16,6 +16,7 @@ $PROGNAME calculates time to leave
 
 options:
   -h, --help              display this help and exit
+  -i, --info              display configuration and exit
   -l, --long              display full time
   -m, --message message   set leave message. Default $DEFAULT_MESSAGE
   -t, --time time         set leave hour in HH:MM format
@@ -67,6 +68,7 @@ prompt_for_leave_time() {
 # Variables
 is_long_time=false
 has_config_changed=false
+show_info=false
 cli_leave_time=""
 cli_message=""
 user_leave_time=""
@@ -79,6 +81,10 @@ main() {
       -h|--help)
         print_std_out "$USAGE";
         exit $EXIT_SUCCESS;;
+      -i|--info)
+        show_info=true
+        shift
+        continue;;
       -l|--long)
         is_long_time=true
         shift
@@ -121,6 +127,16 @@ main() {
   else
     user_message=$DEFAULT_MESSAGE
     has_config_changed=true
+  fi
+
+  if $show_info; then
+    if [[ -f "$CONFIG_FILE" ]]; then
+      print_std_out "Leave time: ${user_leave_time}"
+      print_std_out "Message   : ${user_message}"
+    else
+      print_std_out "No configuration found yet. Run ttl or ttl -t HH:MM"
+    fi
+    exit $EXIT_SUCCESS
   fi
 
   [[ -n "$cli_leave_time" ]] && user_leave_time="$cli_leave_time"
