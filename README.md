@@ -47,6 +47,7 @@ ttl calculates time to leave
 
 options:
   -h, --help              display this help and exit
+  -i, --info              display configuration and exit
   -l, --long              display full time
   -m, --message message   set leave message. Default Go go go!
   -t, --time time         set leave hour in HH:MM format
